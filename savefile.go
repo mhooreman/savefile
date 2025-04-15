@@ -10,10 +10,6 @@ import (
 	"time"
 )
 
-/*****************************************************************************
- *                                 Front end                                 *
- *****************************************************************************/
-
 const logLevel slog.Level = slog.LevelInfo
 
 func initLogger() {
@@ -26,17 +22,12 @@ func initLogger() {
 func parseCmdline() (paths []string) {
 	var usage string
 	var ret []string
-	usage = fmt.Sprintf(
-		"usage: %s path [path [path [...]]]\n",
-		filepath.Base(os.Args[0]),
-	)
+	usage = fmt.Sprintf("usage: %s path [path [path [...]]]\n", filepath.Base(os.Args[0]))
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, usage)
 		os.Exit(1)
 	}
-	for _, f := range os.Args[1:] {
-		ret = append(ret, f)
-	}
+	ret = append(ret, os.Args[1:]...)
 	return ret
 }
 
@@ -50,10 +41,6 @@ func main() {
 	}
 }
 
-/*****************************************************************************
- *                              Back end (lib)                               *
- *****************************************************************************/
-
 type tContext struct {
 	sNow string
 	sMe  string
@@ -66,42 +53,30 @@ func getContextSingleton() *tContext {
 	var err error
 	if contextSingleton == nil {
 		now = time.Now()
-		sNow = fmt.Sprintf(
-			"%04d%02d%02d%02d%02d%02d",
-			now.Year(), now.Month(), now.Day(),
-			now.Hour(), now.Minute(), now.Second())
-		me, err = user.Current()
-		if err != nil {
+		sNow = fmt.Sprintf("%04d%02d%02d%02d%02d%02d", now.Year(), now.Month(), now.Day(), now.Hour(), now.Minute(), now.Second())
+		if me, err = user.Current(); err != nil {
 			slog.Error("Cannot get current user information", "error", err)
 			panic(err)
 		}
 		sMe = me.Name
 		if len(sMe) == 0 {
-			slog.Debug(
-				"Current user real name unknown, falling back to login name",
-			)
+			slog.Debug("Current user real name unknown, falling back to login name")
 			sMe = me.Username
 		}
 		contextSingleton = &tContext{sNow, sMe}
-		slog.Debug(
-			"Created context singleton",
-			"sNow", contextSingleton.sNow,
-			"sMe", contextSingleton.sMe,
-		)
+		slog.Debug("Created context singleton", "sNow", contextSingleton.sNow, "sMe", contextSingleton.sMe)
 	}
 	return contextSingleton
 }
 
-var contextSingleton *tContext = nil
+var contextSingleton *tContext
 
 func SaveFile(sourcePath string) {
+	// Takes a backup of the file privided in argument
 	var err error
 	var targetPath string
-	sourcePath, err = filepath.Abs(sourcePath)
-	if err != nil {
-		slog.Error(
-			"Cannot convert to absolute path",
-			"path", sourcePath, "error", err)
+	if sourcePath, err = filepath.Abs(sourcePath); err != nil {
+		slog.Error("Cannot convert to absolute path", "path", sourcePath, "error", err)
 		panic(err)
 	}
 	targetPath = computeTopLevelTargetPath(sourcePath)
@@ -116,17 +91,12 @@ func processEntry(sourcePath string, targetPath string) {
 		"Processing",
 		"sourcePath", sourcePath, "targetPath", targetPath,
 	)
-	sourceFile, err = os.Open(sourcePath)
-	if err != nil {
-		slog.Error(
-			"Cannot open for reading",
-			"path", sourcePath, "error", err,
-		)
+	if sourceFile, err = os.Open(sourcePath); err != nil {
+		slog.Error("Cannot open for reading", "path", sourcePath, "error", err)
 		panic(err)
 	}
 	defer sourceFile.Close()
-	sourceInfo, err = sourceFile.Stat()
-	if err != nil {
+	if sourceInfo, err = sourceFile.Stat(); err != nil {
 		slog.Error("Cannot get file info", "path", sourcePath, "error", err)
 		panic(err)
 	}
@@ -143,13 +113,8 @@ func mirrorMtimeAndMode(path string, info os.FileInfo) {
 	slog.Info("Setting properties", "path", path)
 	mtime = info.ModTime()
 	atime = time.Time{} // time 0 -> not changing
-	err = os.Chtimes(path, atime, mtime)
-	if err != nil {
-		slog.Error(
-			"Cannot set time",
-			"mtime", mtime, "atime", atime,
-			"path", path, "error", err,
-		)
+	if os.Chtimes(path, atime, mtime) != nil {
+		slog.Error("Cannot set time", "mtime", mtime, "atime", atime, "path", path, "error", err)
 	}
 	os.Chmod(path, info.Mode())
 }
@@ -158,10 +123,7 @@ func processDirectory(
 	sourcePath string, sourceFile *os.File, sourceInfo os.FileInfo,
 	targetPath string,
 ) {
-	slog.Info(
-		"Creating",
-		"directory", targetPath, "source", sourcePath,
-	)
+	slog.Info("Creating", "directory", targetPath, "source", sourcePath)
 	defer mirrorMtimeAndMode(targetPath, sourceInfo)
 	os.Mkdir(targetPath, 0777) // umask will remove what's needed
 	diveDirectory(sourceFile, targetPath)
@@ -171,22 +133,15 @@ func diveDirectory(dir *os.File, targetDirName string) {
 	var childs []os.DirEntry
 	var err error
 	var sourcePath, targetPath string
-	childs, err = dir.ReadDir(-1)
-	if err != nil {
+	if childs, err = dir.ReadDir(-1); err != nil {
 		slog.Error(
 			"Cannot get directory content", "path", dir.Name(),
 		)
 		panic(err)
 	}
 	for _, child := range childs {
-		sourcePath = fmt.Sprintf(
-			"%s%c%s",
-			dir.Name(), os.PathSeparator, child.Name(),
-		)
-		targetPath = fmt.Sprintf(
-			"%s%c%s",
-			targetDirName, os.PathSeparator, child.Name(),
-		)
+		sourcePath = fmt.Sprintf("%s%c%s", dir.Name(), os.PathSeparator, child.Name())
+		targetPath = fmt.Sprintf("%s%c%s", targetDirName, os.PathSeparator, child.Name())
 		processEntry(sourcePath, targetPath)
 	}
 }
@@ -199,12 +154,8 @@ func processFile(
 	var err error
 	slog.Info("Creating", "file", targetPath, "source", sourcePath)
 
-	targetFile, err = os.Create(targetPath)
-	if err != nil {
-		slog.Error(
-			"Cannot open file for writing",
-			"path", targetPath, "error", err,
-		)
+	if targetFile, err = os.Create(targetPath); err != nil {
+		slog.Error("Cannot open file for writing", "path", targetPath, "error", err)
 		panic(err)
 	}
 
@@ -213,19 +164,15 @@ func processFile(
 		mirrorMtimeAndMode(targetPath, sourceInfo)
 	}()
 
-	_, err = io.Copy(targetFile, sourceFile)
-	if err != nil {
-		slog.Error(
-			"Cannot open file for writing",
-			"path", targetPath, "error", err,
-		)
+	if _, err = io.Copy(targetFile, sourceFile); err != nil {
+		slog.Error("Cannot open file for writing", "path", targetPath, "error", err)
 		panic(err)
 	}
 }
 
 func computeTopLevelTargetPath(sourcePath string) string {
 	const extSep rune = '.'
-	var posn int = -1
+	var posn = -1
 	var base, dir, stem, ext string
 	base = filepath.Base(sourcePath)
 	dir = filepath.Dir(sourcePath)
@@ -244,8 +191,5 @@ func computeTopLevelTargetPath(sourcePath string) string {
 		stem = base
 	}
 	tmp := getContextSingleton()
-	return fmt.Sprintf(
-		"%s%c%s.bak_%s_%s%s",
-		dir, os.PathSeparator, stem, tmp.sNow, tmp.sMe, ext,
-	)
+	return fmt.Sprintf("%s%c%s.bak_%s_%s%s", dir, os.PathSeparator, stem, tmp.sNow, tmp.sMe, ext)
 }
