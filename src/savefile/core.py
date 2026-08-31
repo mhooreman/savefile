@@ -135,7 +135,7 @@ def save_file(paths: tuple[pathlib.Path, ...]) -> bool:
 
     See cli.main's documentation for more information.
 
-    :return: True if no issue, False otherwize
+    :return: True if no issue, False otherwise
     """
     has_error = False
     for p in paths:
