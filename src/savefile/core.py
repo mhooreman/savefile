@@ -12,6 +12,7 @@ from . import logger
 if typing.TYPE_CHECKING:
     import pathlib
 
+
 _BACKUP_SUFFIX: typing.Final[str] = "_".join([
     "bak",
     getpass.getuser(),
@@ -43,7 +44,7 @@ class _ABCProcessor(abc.ABC):
         try:
             src.copy(dst)
         except OSError as e:
-            logger.error(f"Cannot copy {src} to {dst}: {e}")
+            raise CannotCopyFileError(src, dst, e) from e
 
     @functools.cached_property
     def path_to(self) -> pathlib.Path:
@@ -67,6 +68,20 @@ class NeitherFileNorDirectoryError(OSError):
     def __post_init__(self) -> None:
         """Initialize the parent exception."""
         msg = f"{self.path} is neither a file nor a directory"
+        super().__init__(msg)
+
+
+@dataclasses.dataclass(frozen=True)
+class CannotCopyFileError(OSError):
+    """There was an error while copying a file."""
+
+    src: pathlib.Path
+    dst: pathlib.Path
+    parent_error: OSError
+
+    def __post_init__(self) -> None:
+        """Initialize the inherited class."""
+        msg = f"Cannot copy {self.src} to {self.dst}: {self.parent_error}"
         super().__init__(msg)
 
 
@@ -115,13 +130,18 @@ class _DirectoryProcessor(_ABCProcessor):
                 self._copy_directory(src, dst)
 
 
-def save_file(paths: frozenset[pathlib.Path]) -> None:
+def save_file(paths: frozenset[pathlib.Path]) -> bool:
     """Take backup copies of the provided files.
 
     See cli.main's documentation for more information.
+
+    :return: True if no issue, False otherwize
     """
+    has_error = False
     for p in paths:
         try:
             _FlexiblePathProcessor(p)()
-        except NeitherFileNorDirectoryError as e:
+        except (NeitherFileNorDirectoryError, CannotCopyFileError) as e:
             logger.error(f"{e} - Skipping")
+            has_error = True
+    return not has_error
