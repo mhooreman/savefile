@@ -16,7 +16,7 @@ if typing.TYPE_CHECKING:
 _BACKUP_SUFFIX: typing.Final[str] = "_".join([
     "bak",
     getpass.getuser(),
-    datetime.datetime.now().strftime("%Y-%m-%d-%H-%H-%S")
+    datetime.datetime.now().strftime("%Y-%m-%d-%H-%M-%S")
 ])
 
 
