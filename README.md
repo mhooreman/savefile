@@ -28,7 +28,7 @@ Simply install the wheel.
 
 We recommend installing it using `uv`. For example, for version 0.2.0:
 ```
-uv tool install https://github.com/mhooreman/savefile/releases/download/0.1.0/savefile-0.2.0-py3-none-any.whl
+uv tool install https://github.com/mhooreman/savefile/releases/download/0.2.0/savefile-0.2.0-py3-none-any.whl
 ```
 
 Python compatibility
