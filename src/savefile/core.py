@@ -122,7 +122,7 @@ class _DirectoryProcessor(_ABCProcessor):
             path_from = self.path_from
         if path_to is None:
             path_to = self.path_to
-        for src in path_from.glob("**/*"):
+        for src in path_from.iterdir():
             dst = path_to.joinpath(src.relative_to(path_from))
             if src.is_file():
                 self.copy_file(src, dst)
