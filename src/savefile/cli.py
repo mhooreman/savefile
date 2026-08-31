@@ -1,10 +1,14 @@
 """Provide the command line interface."""
 
 import pathlib
+import typing
 
 import click
 
 from .core import save_file
+
+EXIT_SUCCESS: typing.Final[int] = 0
+EXIT_FILE_FAILURE: typing.Final[int] = 10
 
 
 @click.command(name="savefile")
@@ -28,4 +32,5 @@ def main(paths: tuple[pathlib.Path, ...]) -> None:
     if not paths:
         msg = "At least one path must be provided"
         raise click.BadParameter(msg, param_hint="paths")
-    save_file(frozenset(sorted(paths)))
+    success = save_file(tuple(sorted(set(paths))))
+    raise SystemExit(EXIT_SUCCESS if success else EXIT_FILE_FAILURE)
