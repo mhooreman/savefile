@@ -1,6 +1,6 @@
 [project]
 name = "savefile"
-version = "0.1.0"
+version = "0.2.0"
 description = "Take backup copies of files/directories with timestamp and username as suffix"
 readme = "README.md"
 authors = [
