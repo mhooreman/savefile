@@ -32,5 +32,5 @@ def main(paths: tuple[pathlib.Path, ...]) -> None:
     if not paths:
         msg = "At least one path must be provided"
         raise click.BadParameter(msg, param_hint="paths")
-    success = save_file(frozenset(sorted(paths)))
+    success = save_file(tuple(sorted(set(paths))))
     raise SystemExit(EXIT_SUCCESS if success else EXIT_FILE_FAILURE)

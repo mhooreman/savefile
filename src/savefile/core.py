@@ -130,7 +130,7 @@ class _DirectoryProcessor(_ABCProcessor):
                 self._copy_directory(src, dst)
 
 
-def save_file(paths: frozenset[pathlib.Path]) -> bool:
+def save_file(paths: tuple[pathlib.Path, ...]) -> bool:
     """Take backup copies of the provided files.
 
     See cli.main's documentation for more information.
